@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2021/10/24 1:13 下午 
 # @Author  : xujunpeng
+import os
 from app import app
 from celery import Celery
+from config import celery_config
+from flask import Config
+
+
+# TODO 是否要和celery的配置合并到一起呢
 
 
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL'],
-        include=['app.celery.tasks', 'app.celery.beat']
+        backend=celery_config.CELERY_RESULT_BACKEND,
+        broker=celery_config.CELERY_BROKER_URL,
     )
-    celery.conf.update(app.config)
+    celery.conf.update(Config(os.getcwd()).from_object(celery_config))
 
     class ContextTask(celery.Task):
         def __call__(self, *args, **kwargs):
