@@ -4,7 +4,6 @@
 from app.celery import celery
 
 
-@celery.task
+@celery.task(cn_name="测试ping")
 def ping():
     print("ping !")
-    raise RuntimeError

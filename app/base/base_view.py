@@ -10,6 +10,8 @@ from app.base.base_enum import BaseEnum
 from app.enum.status_code import Codes
 from sentry_sdk import capture_exception
 
+from app.utils.monitor import dispatch_monitor
+
 
 class BaseView(MethodView):
     def __init__(self, *args, **kwargs):
@@ -32,6 +34,7 @@ class BaseView(MethodView):
             }
         )
 
+    @dispatch_monitor
     def dispatch_request(self, *args, **kwargs):
         try:
             # 白名单

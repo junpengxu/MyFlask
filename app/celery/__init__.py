@@ -2,13 +2,14 @@
 # @Time    : 2021/10/24 1:13 下午 
 # @Author  : xujunpeng
 import os
+from functools import wraps
+
 from app import app
 from celery import Celery
+
+from app.utils.monitor import celery_monitor
 from config import celery_config
 from flask import Config
-
-
-# TODO 是否要和celery的配置合并到一起呢
 
 
 def make_celery(app):
@@ -17,9 +18,12 @@ def make_celery(app):
         backend=celery_config.CELERY_RESULT_BACKEND,
         broker=celery_config.CELERY_BROKER_URL,
     )
-    celery.conf.update(Config(os.getcwd()).from_object(celery_config))
+    _config = Config(os.getcwd())
+    _config.from_object(celery_config)
+    celery.conf.update(_config)
 
     class ContextTask(celery.Task):
+        @celery_monitor
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return self.run(*args, **kwargs)

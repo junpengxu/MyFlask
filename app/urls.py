@@ -4,4 +4,4 @@
 
 from app.view.ping import Ping
 def bind_urls(app):
-    app.add_url_rule('/ping', view_func=Ping.as_view('ping'), methods=['GET', 'POST'])
+    app.add_url_rule('/ping', view_func=Ping.as_view('乒'), methods=['GET', 'POST'])
