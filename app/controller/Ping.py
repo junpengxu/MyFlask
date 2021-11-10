@@ -4,14 +4,17 @@
 from typing import List, Dict
 
 from app.base.base_controller import BaseController
+from app.utils.trace import Trace
 
 
 class PingController(BaseController):
     def __init__(self, model):
         super().__init__(model)
 
-    def get(self, pk):
-        return super().get(pk)
+    @staticmethod
+    @Trace
+    def get(pk):
+        return 123;
 
     def create(self, *args, **kwargs):
         super().create(*args, **kwargs)

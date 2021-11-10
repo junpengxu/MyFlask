@@ -9,7 +9,6 @@ from app.enum.status_code import Codes
 def login_check(func):
     @wraps(func)
     def wrapper(self, *args, **kw):
-        import pdb;pdb.set_trace()
         if not self.user_id:
             return self.formattingData(code=Codes.NOT_LOG_IN)
         return func(self, *args, **kw)

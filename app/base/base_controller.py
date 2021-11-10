@@ -31,43 +31,7 @@ class BaseController:
         """
 
         offset = 20 if offset > 20 else offset
-        result = []
-
-        # 添加这个创建时间的过滤是为了兼容处理后台创建的数据展示，展示当前时间点之前的数据
-        _q = and_(Ugc.is_online == True, Ugc.create_time <= datetime.datetime.now())
-        if content:
-            _q = and_(_q, or_(Ugc.content.like('%' + content + '%'), Ugc.title.like('%' + content + '%')))
-        for k, v in filter.items():
-            # 如果v不为空，这里是包括了 "", None
-            if hasattr(Ugc, k) and v:
-                _q = and_(_q, getattr(Ugc, k) == v)
-
-        # query的实现可以参考es的做法
-
-        query = {
-            ""
-        }
-
-        _query = {}
-
-        # 默认id降序
-        _sort = [self.model.id.desc()]
-        for k, v in sort:
-            if v:
-                # 为true则代表降序
-                _sort.append(getattr(self.model, k).desc())
-            else:
-                _sort.append(getattr(self.model, k).asc())
-
-        # 如果要查询两次， 目前比较容易的方式就是查询两次
-        # total_nums = self.model.query.filter().order_by(*_sort).count()
-        objs = self.model.query.filter().order_by(*_sort).paginate(
-            page=page, per_page=offset, error_out=False
-        ).items
-        for obj in objs:
-            result.append(obj.get_detail())
-        # 如果需要返回总数， 则要查询遍
-        return {"result": result}
+        return {"result": []}
 
     def offline(self, pk):
         pass

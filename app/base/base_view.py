@@ -9,7 +9,7 @@ from app.utils.logger import request_log
 from app.base.base_enum import BaseEnum
 from app.enum.status_code import Codes
 from sentry_sdk import capture_exception
-
+from app.utils.trace import Trace
 from app.utils.monitor import dispatch_monitor
 
 
@@ -17,8 +17,9 @@ class BaseView(MethodView):
     def __init__(self, *args, **kwargs):
         self.__setattr__('request', request)
         self.__setattr__('user_id', self.get_user_id())
-        request_log(msg="this is info,args={},data={}".format(self.request.args.to_dict(),
-                                                              {} if not self.request.data else self.request.json))
+        request_log(msg="this is info,args={},data={}".format(self.request.args.to_dict(), {} if not self.request.data else self.request.json))
+        # 执行trace压栈的操作
+
         super(BaseView, self).__init__(*args, **kwargs)
 
     def formattingData(self, code, msg=None, data=None):
@@ -33,8 +34,8 @@ class BaseView(MethodView):
                 "data": data
             }
         )
-
     @dispatch_monitor
+    @Trace
     def dispatch_request(self, *args, **kwargs):
         try:
             # 白名单

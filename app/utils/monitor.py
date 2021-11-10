@@ -14,10 +14,11 @@ from app.utils.logger import log_exception
 
 def dispatch_monitor(func):
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(*args, **kwargs):
+        self = args[0]
         st = time.time()
         try:
-            t = func(self, *args, **kwargs)
+            t = func(*args, **kwargs)
         except Exception as e:
             raise e
         finally:
@@ -26,7 +27,7 @@ def dispatch_monitor(func):
             endpoint = self.request.url_rule.endpoint
             method = self.request.method
             duration = int((time.time() - st) * 1000)
-            if duration > 3000:
+            if duration > 30000:
                 try:
                     raise RuntimeError
                 except Exception as e:
