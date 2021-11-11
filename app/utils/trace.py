@@ -2,31 +2,37 @@
 # @Time    : 2021/11/7 11:37 下午 
 # @Author  : xujunpeng
 import copy
+import functools
+import inspect
+
+from app import ctx_stack
 
 from py_zipkin.zipkin import zipkin_span, create_attrs_for_span
 from py_zipkin.transport import SimpleHTTPTransport
 from py_zipkin.encoding import Encoding
 from py_zipkin.util import generate_random_64bit_string, ZipkinAttrs
+from werkzeug.local import LocalProxy
+from six.moves.urllib.request import Request
+from six.moves.urllib.request import urlopen
 
-from werkzeug.local import LocalStack, LocalProxy
 
-_ctx_stack = LocalStack()
+class TraceDecorator(type):
+    def __new__(cls, cls_name, bases, dct):
+        for name, value in dct.items():
+            if inspect.isroutine(value):
+                # TODO 原来的函数就不能有装饰器了
+                dct[name] = Trace(value)
+        return super().__new__(cls, cls_name, bases, dct)
 
 
 class Trace:
 
-    def get_current_ctx(self):
-        # do something to get User object and return it
-        return _ctx_stack.pop()
-
     def __init__(self, func):
         self.func = func
         self.attr = None
-        self._attr = create_attrs_for_span()
-        self.current_ctx = LocalProxy(self.get_current_ctx)
 
     def __call__(self, *args, **kwargs):
-        ctx = copy.deepcopy(self.current_ctx)  # 执行完这一行，栈已经被pop出
+        ctx = copy.deepcopy(LocalProxy(lambda: ctx_stack.pop()))  # 执行完这一行，栈已经被pop出
         if ctx:
             self.attr = ZipkinAttrs(
                 span_id=generate_random_64bit_string(),
@@ -36,14 +42,15 @@ class Trace:
                 is_sampled=ctx["is_sampled"]
             )
         else:
-            self.attr = self._attr
+            self.attr = create_attrs_for_span()
+        span_name = self.func.__module__ + "-" + self.func.__name__
         with zipkin_span(
-                service_name="myflask", span_name=self.func.__module__, sample_rate=100,
-                transport_handler=SimpleHTTPTransport('242.193.113.198', 9411),
-                encoding=Encoding.V1_THRIFT,
+                service_name="xdd-dcd", span_name=span_name, sample_rate=100,
+                transport_handler=HTTPTransport('42.193.113.198', 9411),
+                encoding=Encoding.V2_JSON,
                 zipkin_attrs=self.attr
         ):
-            _ctx_stack.push({
+            ctx_stack.push({
                 "trace_id": self.attr.trace_id,
                 "span_id": self.attr.span_id,
                 "is_sampled": self.attr.is_sampled,
@@ -51,10 +58,25 @@ class Trace:
             })
             return self.func(*args, **kwargs)
 
-# def trace(func):
-#     @zipkin_span(service_name="myflask", span_name=func.__module__, sample_rate=100,
-#                  transport_handler=SimpleHTTPTransport('42.193.113.198', 9411), encoding=Encoding.V1_THRIFT)
-#     def wrap(*args, **kwargs):
-#         return func(*args, **kwargs)
-#
-#     return wrap
+    def __get__(self, instance, instancetype):
+        """Implement the descriptor protocol to make decorating instance
+        method possible.
+        """
+
+        # Return a partial function with the first argument is the instance
+        #   of the class decorated.
+        if instance:
+            return functools.partial(self.__call__, instance)
+        return functools.partial(self.__call__)
+
+
+class HTTPTransport(SimpleHTTPTransport):
+
+    def send(self, payload):
+        path, content_type = self._get_path_content_type(payload)
+        url = "http://{}:{}{}".format(self.address, self.port, path)
+
+        req = Request(url, payload.encode(), {"Content-Type": content_type})
+        response = urlopen(req)
+
+        assert response.getcode() == 202

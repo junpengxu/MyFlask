@@ -7,14 +7,16 @@ import config as app_config
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.celery import CeleryIntegration
+from werkzeug.local import LocalStack
 
 sentry_sdk.init(
     dsn=app_config.SENTRY_DSN,
     integrations=[FlaskIntegration(), CeleryIntegration()]
 )
-
+ctx_stack = LocalStack()
 app = Flask(__name__)
 app.config.from_object(app_config)
+app.before_request_funcs = {None: [lambda: print("stack is", ctx_stack.pop())]}
 
 from app.base.base_model import db
 
