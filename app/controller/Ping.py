@@ -15,4 +15,3 @@ class PingController(BaseController):
 
     def query(self, page=1, offset=10, sort: List[set] = None, query: Dict = None):
         pass
-    #

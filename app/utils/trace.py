@@ -4,25 +4,23 @@
 import copy
 import functools
 import inspect
-
-from app import ctx_stack
-
+from app import app
+from flask import g
 from py_zipkin.zipkin import zipkin_span, create_attrs_for_span
 from py_zipkin.transport import SimpleHTTPTransport
 from py_zipkin.encoding import Encoding
 from py_zipkin.util import generate_random_64bit_string, ZipkinAttrs
-from werkzeug.local import LocalProxy
 from six.moves.urllib.request import Request
 from six.moves.urllib.request import urlopen
 
 
 class TraceDecorator(type):
-    def __new__(cls, cls_name, bases, dct):
-        for name, value in dct.items():
-            if inspect.isroutine(value):
-                # TODO 原来的函数就不能有装饰器了
-                dct[name] = Trace(value)
-        return super().__new__(cls, cls_name, bases, dct)
+    def __new__(cls, cls_name, bases, dic):
+        for name, value in dic.items():
+            # TODO 原来的函数就不能有装饰器了, 这个做法就是为了消除类下的函数有装饰器
+            if hasattr(value, "__qualname__") and cls_name in value.__qualname__ and inspect.isroutine(value):
+                dic[name] = Trace(value)
+        return super().__new__(cls, cls_name, bases, dic)
 
 
 class Trace:
@@ -32,37 +30,34 @@ class Trace:
         self.attr = None
 
     def __call__(self, *args, **kwargs):
-        ctx = copy.deepcopy(LocalProxy(lambda: ctx_stack.pop()))  # 执行完这一行，栈已经被pop出
+        # 如果获取不到，那说明 before_request出现异常
+        ctx = getattr(g, app.config["ZIPKIN_TRACE"], Exception("TRACE INFO MISSING"))
         if ctx:
             self.attr = ZipkinAttrs(
                 span_id=generate_random_64bit_string(),
-                trace_id=ctx["trace_id"],
-                flags=ctx["flags"],
-                parent_span_id=ctx["span_id"],
-                is_sampled=ctx["is_sampled"]
+                trace_id=ctx.trace_id,
+                flags=ctx.flags,
+                parent_span_id=ctx.parent_span_id,
+                is_sampled=ctx.is_sampled,
             )
         else:
             self.attr = create_attrs_for_span()
         span_name = self.func.__module__ + "-" + self.func.__name__
+        # TODO 使用kafka
         with zipkin_span(
-                service_name="xdd-dcd", span_name=span_name, sample_rate=100,
-                transport_handler=HTTPTransport('42.193.113.198', 9411),
+                service_name="MyFlask", span_name=span_name, sample_rate=app.config["ZIPKIN_SAMPLE_RATE"],
+                transport_handler=HTTPTransport(app.config["ZIPKIN_HOST"], app.config["ZIPKIN_PORT"]),
                 encoding=Encoding.V2_JSON,
                 zipkin_attrs=self.attr
-        ):
-            ctx_stack.push({
-                "trace_id": self.attr.trace_id,
-                "span_id": self.attr.span_id,
-                "is_sampled": self.attr.is_sampled,
-                "flags": self.attr.flags,
-            })
+        ) as span:
+            setattr(g, app.config["ZIPKIN_TRACE"], self.attr)
+            span.update_binary_annotations({"update_binary_annotations": "fortest"})
             return self.func(*args, **kwargs)
 
     def __get__(self, instance, instancetype):
         """Implement the descriptor protocol to make decorating instance
         method possible.
         """
-
         # Return a partial function with the first argument is the instance
         #   of the class decorated.
         if instance:

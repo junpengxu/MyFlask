@@ -9,9 +9,8 @@ from app.controller.Ping import PingController
 
 class Ping(BaseView):
     def get(self):
-        for i in range(1):
+        for i in range(3):
             # ping.delay()
-            print("ping")
             PingController().get()
             PingController().query()
             PingController().create()
