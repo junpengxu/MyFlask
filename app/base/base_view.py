@@ -11,9 +11,19 @@ from app.utils.logger import request_log
 from app.base.base_enum import BaseEnum
 from app.enum.status_code import Codes
 from sentry_sdk import capture_exception
-from app.utils.trace import Trace
+from app.utils.trace import Trace, TraceDecorator
 from app.utils.monitor import dispatch_monitor
 from app.utils.kafka import KafkaProducer
+from functools import wraps
+
+# def dispatch_func_name(func):
+#     @wraps(func)
+#     def wrap(*args, **kwargs):
+#         # 修改函数名字
+#         func.__module__ = args[0].__module__
+#         func.__name__ = request.method.lower()
+#         return func(*args, **kwargs)
+#     return wrap
 
 
 class BaseView(MethodView):
@@ -51,8 +61,10 @@ class BaseView(MethodView):
                 "data": data
             }
         )
+
+
     @dispatch_monitor
-    @Trace
+    # @Trace
     def dispatch_request(self, *args, **kwargs):
         try:
             # 白名单

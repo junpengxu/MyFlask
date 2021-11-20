@@ -37,11 +37,14 @@ class Trace:
                 span_id=generate_random_64bit_string(),
                 trace_id=ctx.trace_id,
                 flags=ctx.flags,
-                parent_span_id=ctx.parent_span_id,
+                parent_span_id=ctx.span_id,
                 is_sampled=ctx.is_sampled,
             )
         else:
             self.attr = create_attrs_for_span()
+        # 特殊处理dispatch_request分发的函数 FIXME
+        if self.func.__module__ == "app.base.base_view" and self.func.__name__ == "dispatch_request":
+            self.func.__module__, self.func.__name__ = args[0].__module__, args[0].request.method.lower()
         span_name = self.func.__module__ + "-" + self.func.__name__
         # TODO 使用kafka
         with zipkin_span(

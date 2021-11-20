@@ -6,6 +6,8 @@ from datetime import datetime
 from app import app
 from flask_sqlalchemy import SQLAlchemy, BaseQuery
 
+from app.utils.trace import Trace
+
 
 class QueryWithSoftDelete(BaseQuery):
     _with_deleted = False
@@ -29,6 +31,7 @@ class QueryWithSoftDelete(BaseQuery):
         # this calls the original query.get function from the base class
         return super(QueryWithSoftDelete, self).get(*args, **kwargs)
 
+    @Trace
     def get(self, *args, **kwargs):
         # the query.get method does not like it if there is a filter clause
         # pre-loaded, so we need to implement it using a workaround

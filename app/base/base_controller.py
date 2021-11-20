@@ -6,7 +6,7 @@ import inspect
 from app.utils.trace import TraceDecorator
 
 
-class BaseController(metaclass=TraceDecorator):
+class ControllerTrace(metaclass=TraceDecorator):
 
     def get(self, *args, **kwargs):
         pass
@@ -16,3 +16,7 @@ class BaseController(metaclass=TraceDecorator):
 
     def query(self, *args, **kwargs):
         pass
+
+
+class BaseController(ControllerTrace):
+    pass

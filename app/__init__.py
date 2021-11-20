@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2021/10/24 1:10 下午 
 # @Author  : xujunpeng
-
-from flask import Flask, request, g
-from py_zipkin.util import ZipkinAttrs, generate_random_64bit_string, create_attrs_for_span
-
-import config as app_config
 import sentry_sdk
+import config as app_config
+from flask import Flask, request, g
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.celery import CeleryIntegration
+from py_zipkin.util import ZipkinAttrs, generate_random_64bit_string, create_attrs_for_span
 
 sentry_sdk.init(
     dsn=app_config.SENTRY_DSN,
@@ -16,8 +14,6 @@ sentry_sdk.init(
 )
 app = Flask(__name__)
 app.config.from_object(app_config)
-
-from app.base.base_model import db
 
 
 def create_app():
