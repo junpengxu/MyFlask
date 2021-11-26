@@ -2,7 +2,6 @@
 # @Time    : 2021/10/24 1:13 下午 
 # @Author  : xujunpeng
 import os
-from functools import wraps
 
 from app import app
 from celery import Celery

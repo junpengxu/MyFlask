@@ -64,7 +64,7 @@ class BaseView(MethodView):
 
 
     @dispatch_monitor
-    # @Trace
+    @Trace
     def dispatch_request(self, *args, **kwargs):
         try:
             # 白名单

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2021/11/7 11:37 下午 
 # @Author  : xujunpeng
-import copy
 import functools
 import inspect
+
 from app import app
 from flask import g
 from py_zipkin.zipkin import zipkin_span, create_attrs_for_span
@@ -31,8 +31,8 @@ class Trace:
 
     def __call__(self, *args, **kwargs):
         # 如果获取不到，那说明 before_request出现异常
-        ctx = getattr(g, app.config["ZIPKIN_TRACE"], Exception("TRACE INFO MISSING"))
-        if ctx:
+        if hasattr(g, app.config["ZIPKIN_TRACE"]):
+            ctx = getattr(g, app.config["ZIPKIN_TRACE"])
             self.attr = ZipkinAttrs(
                 span_id=generate_random_64bit_string(),
                 trace_id=ctx.trace_id,
@@ -58,8 +58,7 @@ class Trace:
             return self.func(*args, **kwargs)
 
     def __get__(self, instance, instancetype):
-        """Implement the descriptor protocol to make decorating instance
-        method possible.
+        """Implement the descriptor protocol to make decorating instance method possible.
         """
         # Return a partial function with the first argument is the instance
         #   of the class decorated.

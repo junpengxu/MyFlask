@@ -2,7 +2,6 @@
 # @Time    : 2021/11/11 9:17 下午 
 # @Author  : xujunpeng
 from app.base.base_model import BaseModel, db
-from app.utils.trace import Trace
 
 
 class Ping(db.Model, BaseModel):
@@ -10,7 +9,6 @@ class Ping(db.Model, BaseModel):
 
     desc = db.Column(db.String(32), comment="描述", nullable=False, default="")
 
-    @Trace
     def simple_info(self):
         return {
             "id": self.id,
