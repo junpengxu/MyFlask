@@ -80,10 +80,25 @@
 | flink | 自定义各种统计任务，etl等 |doing|
 | elasticsearch | 用于提供数据搜索，自定义数据排序等功能 |todo|
 
-## 功能点
+## 基础服务
 | 功能点       | 描述   |  状态  |
 | :--------  | :-----  | :----:  |
 | 请求上报 | 在base_view层，在访问的url到映射view层的过程中，将请求的数据结构化之后，写入到kafka |done|
 | 链路监控 | 封装了Trace类，可在需要进行链路监控的地方手动上报数据。通过继承元类TraceDecorator实现针对某个类下的所有函数进行了一次Trace装饰器的封装，这里需要注意的一点，如果类的方法已经有过装饰器，则TraceDecorator失效 |done|
 | 异常监控 | 继承了sentry，可自动上报flask服务检测到的异常，同时封装了log_exception可以实现手动上报异常 |done|
 | 耗时监控 | grafana_transport 封装了自定义打点 |done|
+
+## 自定义功能
+| 功能点       | 描述   |  状态  |
+| :--------  | :-----  | :----:  |
+| 主从数据库 |  |done|
+| 服务调用链路监控 | 服务间请求通过在header中携带trace信息实现 |todo|
+| 线程监控 | 监控主进程fork出来线程的关系，集成到trace |todo|
+| celery任务监控 | 串联起请求所触发的所有celery任务，集成到trace |todo|
+
+
+## 使用介绍
+1. urls.py 中设置路由映射
+2. view层实现请求接入以及数据处理与业务数据
+3. controller层实现对model层的操作
+4. model层定义数据结构，model层已经设置了软删除，查询的sql会自动拼接is_delete=False

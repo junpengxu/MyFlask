@@ -11,13 +11,15 @@ from app.controller.Ping import PingController
 class Ping(BaseView):
 
     def get(self):
-        params = self.request.args
-        pk = params.get("pk")
-        # ping.delay()
-        res = PingController().get(pk)
-        return self.formattingData(code=Codes.SUCCESS, data="res")
+        import pdb;pdb.set_trace()
 
-    # @login_check
+        params = self.request.args
+        pk = params.get("pk", 1)
+        ping.delay()
+        res = PingController().get(pk)
+        return self.formattingData(code=Codes.SUCCESS, data=res)
+
+    @login_check
     def post(self):
         params = self.request.json
         desc = params.get("desc")

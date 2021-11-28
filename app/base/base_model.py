@@ -2,10 +2,10 @@
 # @Time    : 2021/10/24 1:15 下午 
 # @Author  : xujunpeng
 from datetime import datetime
-
+import random
 from app import app
-from flask_sqlalchemy import SQLAlchemy, BaseQuery
-
+from flask_sqlalchemy import SQLAlchemy, BaseQuery, SignallingSession, get_state
+from sqlalchemy import orm
 from app.utils.trace import Trace
 
 
@@ -39,7 +39,58 @@ class QueryWithSoftDelete(BaseQuery):
         return obj if obj is None or self._with_deleted or not obj.delete else None
 
 
-db = SQLAlchemy(app, use_native_unicode="utf8mb4", query_class=QueryWithSoftDelete)
+class RoutingSession(SignallingSession):
+
+    def __init__(self, *args, **kwargs):
+        self.slave_db_key = [bind.startswith("slave") for bind in app.config["SQLALCHEMY_BINDS"].keys()]
+        super(RoutingSession, self).__init__(*args, **kwargs)
+
+    def get_bind(self, mapper=None, clause=None):
+        """每次数据库操作(增删改查及事务操作)都会调用该方法, 来获取对应的数据库引擎(访问的数据库)"""
+        state = get_state(self.app)
+        if mapper is not None:
+            try:
+                # SA >= 1.3
+                persist_selectable = mapper.persist_selectable
+            except AttributeError:
+                # SA < 1.3
+                persist_selectable = mapper.mapped_table
+            # 如果项目中指明了特定数据库，就获取到bind_key指明的数据库，进行数据库绑定
+            info = getattr(persist_selectable, 'info', {})
+            bind_key = info.get('bind_key')
+            if bind_key is not None:
+                return state.db.get_engine(self.app, bind=bind_key)
+
+                # 使用默认的主数据库
+                # SQLALCHEMY_DATABASE_URI 返回数据库引擎
+                # return SessionBase.get_bind(self, mapper, clause)
+
+        from sqlalchemy.sql.dml import UpdateBase
+        # 写操作 或者 更新 删除操作 - 访问主库
+        if self._flushing or isinstance(clause, UpdateBase):
+            print("写更新删除 访问主库")
+            # 返回主库的数据库引擎
+            return state.db.get_engine(self.app, bind="master")
+        else:
+            # 读操作--访问从库
+            slave_key = random.choice(self.slave_db_key)
+            print("访问从库:{}".format(slave_key))
+            # 返回从库的数据库引擎
+            return state.db.get_engine(self.app, bind=slave_key)
+
+
+# 3.2 自定义RoutingSQLAlchemy，继承于SQLAlchemy，重写写create_session，替换底层的SignallingSession
+# https://www.cxyzjd.com/article/user_san/109649006
+class RoutingSQLAlchemy(SQLAlchemy):
+
+    def create_session(self, options):
+        # 使用自定义实现了读写分离的RoutingSession
+        return orm.sessionmaker(class_=RoutingSession, db=self, **options)
+
+
+# 3.3根据RoutingSQLAlchemy创建数据库对象
+
+db = RoutingSQLAlchemy(app, use_native_unicode="utf8mb4", query_class=QueryWithSoftDelete)
 
 
 class BaseModel(object):
