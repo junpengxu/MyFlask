@@ -4,7 +4,7 @@
 import time
 from typing import List, Dict
 from app.base.base_controller import BaseController
-from app.model.Ping import Ping
+from app.model.ping import Ping
 
 
 class PingController(BaseController):

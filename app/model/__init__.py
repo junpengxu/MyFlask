@@ -2,4 +2,4 @@
 # @Time    : 2021/10/24 1:13 下午 
 # @Author  : xujunpeng
 
-from .Ping import Ping
+from .ping import Ping

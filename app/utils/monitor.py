@@ -4,7 +4,7 @@
 
 import time
 from functools import wraps
-from app.utils.GrafanaTransport import GrafanaTransport
+from app.utils.grafana_transport import GrafanaTransport
 from app.utils.logger import log_exception
 
 
