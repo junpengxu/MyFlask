@@ -11,7 +11,6 @@ from app.controller.Ping import PingController
 class Ping(BaseView):
 
     def get(self):
-        import pdb;pdb.set_trace()
 
         params = self.request.args
         pk = params.get("pk", 1)
