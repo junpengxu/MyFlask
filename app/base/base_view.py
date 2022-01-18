@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2021/10/24 1:15 下午 
 # @Author  : xujunpeng
+import json
+import time
 
 from app import app
 from flask import request, jsonify
@@ -9,6 +11,9 @@ from app.utils.logger import request_log
 from app.base.base_enum import BaseEnum
 from app.enum.status_code import Codes
 from sentry_sdk import capture_exception
+from app.utils.trace import Trace
+from app.utils.monitor import dispatch_monitor
+from app.utils.kafka import KafkaProducer
 
 
 class BaseView(MethodView):
@@ -17,6 +22,21 @@ class BaseView(MethodView):
         self.__setattr__('user_id', self.get_user_id())
         request_log(msg="this is info,args={},data={}".format(self.request.args.to_dict(),
                                                               {} if not self.request.data else self.request.json))
+        # 执行trace压栈的操作
+        log = {
+            "user_id": self.user_id,
+            "session_id": "",
+            "server_name": "MyFlask",
+            "timestamp": int(time.time() * 1000),
+            "ip": self.request.headers.get("X-Real-IP"),
+            "request_url": self.request.path,
+            "request_method": self.request.method,
+            "request_endpoint": self.request.url_rule.endpoint,
+            "request_args": self.request.args.to_dict(),
+            "request_params": {} if not self.request.data else self.request.json,
+        }
+
+        KafkaProducer.produce(topic=app.config["KAFKA_LOGS_TOPIC"], value=json.dumps(log))
         super(BaseView, self).__init__(*args, **kwargs)
 
     def formattingData(self, code, msg=None, data=None):
@@ -32,6 +52,9 @@ class BaseView(MethodView):
             }
         )
 
+
+    @dispatch_monitor
+    @Trace
     def dispatch_request(self, *args, **kwargs):
         try:
             # 白名单

@@ -4,8 +4,10 @@
 from gevent import monkey
 
 monkey.patch_all()
+import app.model  # 用于引入所有的model，防止生成sqlarchmy找不到模型, 需要找一个更加优雅的方式
+from app import create_app
+from app.base.base_model import db
 
-from app import create_app, db
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Shell, Manager, Server
 

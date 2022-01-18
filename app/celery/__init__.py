@@ -1,20 +1,28 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2021/10/24 1:13 下午 
 # @Author  : xujunpeng
+import os
+
 from app import app
 from celery import Celery
+
+from app.utils.monitor import celery_monitor
+from config import celery_config
+from flask import Config
 
 
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL'],
-        include=['app.celery.tasks', 'app.celery.beat']
+        backend=celery_config.CELERY_RESULT_BACKEND,
+        broker=celery_config.CELERY_BROKER_URL,
     )
-    celery.conf.update(app.config)
+    _config = Config(os.getcwd())
+    _config.from_object(celery_config)
+    celery.conf.update(_config)
 
     class ContextTask(celery.Task):
+        @celery_monitor
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return self.run(*args, **kwargs)
